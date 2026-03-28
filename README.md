@@ -126,6 +126,7 @@ jupyter notebook India's Medicine Price Gap Analyzer.ipynb
 ## 👤 Author
 
 **Daksh Malhotra**
+
 B.Tech Engineering Physics, Delhi Technological University (DTU)
 
 *This analysis is for educational purposes. Always consult a qualified medical professional before switching medications.*
