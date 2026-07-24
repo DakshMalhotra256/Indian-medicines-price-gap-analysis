@@ -1,0 +1,16 @@
+pack_type,medicines,avg_ppu,median_ppu
+tablet,147928,14.63,8.02
+vial,28337,680.71,75.0
+capsule,20552,28.96,10.0
+syrup,16415,1.38,0.9
+suspension,8980,9.58,1.1
+tube,7929,9.01,6.19
+drop,5068,15.43,7.7
+other,4744,86.52,2.46
+injection,2738,819.83,49.5
+solution,1745,145.93,7.5
+gel,1033,30.42,19.9
+powder,371,100.59,2.03
+sachet,197,30.68,21.33
+cream,21,7.74,2.9
+ointment,6,2.21,2.07

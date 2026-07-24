@@ -1,0 +1,11 @@
+salt_name,brands,cheapest_ppu,costliest_ppu,saving_per_unit
+Amoxycillin,8373,0.226,830.0,829.77
+Paracetamol,2238,0.098,330.0,329.9
+Azithromycin,4766,0.25,249.5,249.25
+Pantoprazole,2781,0.342,150.0,149.66
+Omeprazole,1196,0.237,135.0,134.76
+Amlodipine,1420,0.3,65.0,64.7
+Atorvastatin,2216,0.6,64.42,63.82
+Telmisartan,3997,0.65,36.55,35.91
+Metformin,2171,0.42,32.0,31.58
+Cetirizine,1367,0.03,14.9,14.87

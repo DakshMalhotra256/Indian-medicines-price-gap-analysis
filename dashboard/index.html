@@ -1,0 +1,184 @@
+<title>Indian Medicine Price Gap Dashboard</title>
+<style>
+  :root{
+    --bg:#f6f8f8; --surface:#ffffff; --ink:#0f172a; --muted:#64748b;
+    --line:#e3e9e9; --grid:#eef3f3;
+    --accent:#0d9488; --warn:#e8883a; --bad:#dc5a4b; --good:#0d9488;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.05);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0a1414; --surface:#0f1e1d; --ink:#e6f0ef; --muted:#8fa3a1;
+      --line:#1f3230; --grid:#162523;
+      --accent:#2dd4bf; --warn:#f0a458; --bad:#f0766a; --good:#2dd4bf;
+      --shadow:0 1px 2px rgba(0,0,0,.4);}
+  }
+  :root[data-theme="dark"]{--bg:#0a1414; --surface:#0f1e1d; --ink:#e6f0ef; --muted:#8fa3a1;
+    --line:#1f3230; --grid:#162523; --accent:#2dd4bf; --warn:#f0a458; --bad:#f0766a; --good:#2dd4bf;}
+  :root[data-theme="light"]{--bg:#f6f8f8; --surface:#ffffff; --ink:#0f172a; --muted:#64748b;
+    --line:#e3e9e9; --grid:#eef3f3; --accent:#0d9488; --warn:#e8883a; --bad:#dc5a4b; --good:#0d9488;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.4}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 18px 48px}
+  header{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+  h1{font-size:20px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .slicer{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+  select{font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink)}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:6px 0 16px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 13px;box-shadow:var(--shadow)}
+  .kpi .v{font-size:21px;font-weight:650;letter-spacing:-.02em}
+  .kpi .l{font-size:11.5px;color:var(--muted);margin-top:2px}
+  nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+  nav button{font:inherit;font-size:13.5px;font-weight:550;padding:9px 14px;border:0;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  nav button.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 15px;box-shadow:var(--shadow);min-width:0}
+  .card h3{margin:0 0 2px;font-size:14px}
+  .card .note{color:var(--muted);font-size:12px;margin:0 0 10px}
+  .chart{width:100%;overflow-x:auto}
+  svg{display:block;max-width:100%}
+  .tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--surface);font-size:12px;padding:5px 8px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:9;box-shadow:var(--shadow)}
+  .hidden{display:none}
+  .foot{color:var(--muted);font-size:11.5px;margin-top:22px;text-align:center}
+  @media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Indian Medicine Price Gap</h1>
+      <div class="sub" id="hdrSub"></div>
+    </div>
+    <div class="slicer">Formulation <select id="ptSel"></select></div>
+  </header>
+  <div class="kpis" id="kpis"></div>
+  <nav id="nav"></nav>
+
+  <div id="page-overview" class="page">
+    <div class="grid g2">
+      <div class="card"><h3>Affordability index distribution</h3><p class="note" id="affNote"></p><div class="chart" id="c-aff"></div></div>
+      <div class="card"><h3>Medicines by formulation</h3><p class="note">How the market splits across dosage forms</p><div class="chart" id="c-form"></div></div>
+    </div>
+  </div>
+
+  <div id="page-gaps" class="page hidden">
+    <div class="grid g2">
+      <div class="card"><h3>Biggest per-unit price gaps</h3><p class="note">Same molecule &amp; form, 30+ brands — costliest ÷ cheapest</p><div class="chart" id="c-topgaps"></div></div>
+      <div class="card"><h3>The competition paradox</h3><p class="note">Median price gap by number of competing brands</p><div class="chart" id="c-comp"></div></div>
+    </div>
+  </div>
+
+  <div id="page-mfg" class="page hidden">
+    <div class="grid g2">
+      <div class="card"><h3>Most overpriced manufacturers</h3><p class="note">Avg per-unit premium vs the composition's median (≥50 products)</p><div class="chart" id="c-mexp"></div></div>
+      <div class="card"><h3>Most affordable manufacturers</h3><p class="note">Lowest premium — the generics champions</p><div class="chart" id="c-maff"></div></div>
+    </div>
+  </div>
+
+  <div id="page-cat" class="page hidden">
+    <div class="grid g2">
+      <div class="card"><h3>Price gap by therapeutic category</h3><p class="note">Median gap over compositions with 10+ brands</p><div class="chart" id="c-therapy"></div></div>
+      <div class="card"><h3>Switch &amp; save: common molecules</h3><p class="note">Per-unit gap between cheapest and costliest brand (₹)</p><div class="chart" id="c-savings"></div></div>
+    </div>
+  </div>
+
+  <div class="foot">Cleaned from 253,973 raw records (Indian medicines) · interactive companion to the Power BI dashboard</div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = {"meta":{"medicines":246064,"compositions":11246,"manufacturers":7640,"salts":1523},"affBins":[1,2,3,4,5,6,7,8,9,10,15,20,999],"packTypes":["All","tablet","vial","capsule","syrup","suspension","tube","drop","other"],"byPackType":{"All":{"count":246064,"median_ppu":8.37,"pct2":82.1,"pct5":53.3,"pct10":31.9,"affHist":[43079,28422,24087,18516,13519,11288,9365,9669,8561,27123,15112,37323]},"tablet":{"count":147928,"median_ppu":8.02,"pct2":85.8,"pct5":59.3,"pct10":35.6,"affHist":[20417,14133,13883,11196,9063,7156,5984,6691,6178,19916,11530,21781]},"vial":{"count":28337,"median_ppu":75.0,"pct2":86.0,"pct5":75.3,"pct10":63.3,"affHist":[3955,1261,904,850,899,597,528,559,768,2985,2097,12934]},"capsule":{"count":20552,"median_ppu":10.0,"pct2":87.2,"pct5":59.3,"pct10":20.0,"affHist":[2599,1660,2027,1988,1317,1966,1923,1701,1068,2954,876,473]},"syrup":{"count":16415,"median_ppu":0.9,"pct2":69.0,"pct5":9.9,"pct10":0.9,"affHist":[4955,4732,3322,1766,690,469,191,103,37,72,25,53]},"suspension":{"count":8980,"median_ppu":1.1,"pct2":66.2,"pct5":12.0,"pct10":2.3,"affHist":[2972,2349,1600,965,283,244,162,126,65,92,36,86]},"tube":{"count":7929,"median_ppu":6.19,"pct2":65.9,"pct5":32.9,"pct10":15.0,"affHist":[2657,1259,749,628,489,328,238,198,175,337,219,652]},"drop":{"count":5068,"median_ppu":7.7,"pct2":64.6,"pct5":25.6,"pct10":9.4,"affHist":[1754,1075,567,351,246,225,148,119,93,273,84,133]},"other":{"count":4744,"median_ppu":2.46,"pct2":58.1,"pct5":21.8,"pct10":9.7,"affHist":[1966,918,494,326,227,143,89,66,51,140,69,255]}},"formulationMix":[{"k":"tablet","v":147928},{"k":"vial","v":28337},{"k":"capsule","v":20552},{"k":"syrup","v":16415},{"k":"suspension","v":8980},{"k":"tube","v":7929},{"k":"drop","v":5068},{"k":"other","v":4744}],"topGaps":[{"k":"Cefoperazone (500mg) + Sulbactam (500mg) | via","brands":443,"ratio":6213.8},{"k":"Povidone Iodine (5% w/v) | solution","brands":32,"ratio":2892.5},{"k":"Diclofenac (50mg) + Paracetamol (500mg) | tabl","brands":512,"ratio":2118.4},{"k":"Doxorubicin (Plain) (50mg) | vial","brands":33,"ratio":1740.7},{"k":"Chlorhexidine Gluconate (0.2% w/v) | other","brands":89,"ratio":1097.2},{"k":"Sparfloxacin (200mg) | tablet","brands":206,"ratio":928.0},{"k":"Paracetamol (1000mg) | other","brands":93,"ratio":800.0},{"k":"Meropenem (250mg) | vial","brands":69,"ratio":786.8},{"k":"Amikacin (100mg) | vial","brands":503,"ratio":738.0},{"k":"Cefuroxime (500mg) | tablet","brands":1297,"ratio":672.0},{"k":"Hydrocortisone (100mg) | vial","brands":115,"ratio":638.3},{"k":"Paclitaxel (100mg) | vial","brands":55,"ratio":599.8},{"k":"Docetaxel (120mg) | vial","brands":36,"ratio":572.0},{"k":"Levosalbutamol (1mg) + Ambroxol (30mg) | syrup","brands":70,"ratio":518.5},{"k":"Fluconazole (150mg) | tablet","brands":881,"ratio":515.2},{"k":"Nimesulide (100mg) | tablet","brands":606,"ratio":479.6},{"k":"Paclitaxel (260mg) | vial","brands":31,"ratio":436.4},{"k":"Cefpodoxime Proxetil (200mg) | tablet","brands":1626,"ratio":418.0},{"k":"Amoxycillin  (1000mg) + Clavulanic Acid (200mg","brands":479,"ratio":415.7},{"k":"Tranexamic Acid (250mg) + Ethamsylate (250mg) ","brands":121,"ratio":337.6}],"competition":[{"k":"5-10","v":2.6},{"k":"11-25","v":3.8},{"k":"26-50","v":6.6},{"k":"51-100","v":8.8},{"k":"101-500","v":13.8},{"k":"500+","v":43.7}],"therapyGaps":[{"k":"Gastro","v":8.3,"n":85},{"k":"Vitamin/Supplement","v":7.9,"n":61},{"k":"Pain/Fever","v":6.9,"n":150},{"k":"Cardiac/BP","v":6.8,"n":126},{"k":"Diabetes","v":6.6,"n":60},{"k":"Other","v":5.5,"n":1874},{"k":"Antibiotic","v":5.2,"n":221},{"k":"Allergy/Resp","v":4.4,"n":85}],"mfgExpensive":[{"k":"Venus Remedies Ltd","v":26.92,"n":139},{"k":"Win-Medicare Pvt Ltd","v":8.8,"n":150},{"k":"Roma Pharma Pvt Ltd","v":8.05,"n":93},{"k":"Qgensun Healthcare","v":7.41,"n":56},{"k":"Taj Pharma India Ltd","v":5.35,"n":339},{"k":"Vytrax Healthcare","v":5.12,"n":71},{"k":"Gufic Bioscience Ltd","v":4.39,"n":123},{"k":"Dr. Edwin Lab","v":4.37,"n":187},{"k":"Somkee India Private Limited","v":4.29,"n":54},{"k":"Modi Mundi Pharma Pvt Ltd","v":4.26,"n":67},{"k":"Chandra Bhagat Pharma Pvt Lt","v":4.23,"n":137},{"k":"Overseas Pharma Pvt Ltd","v":4.07,"n":60}],"mfgAffordable":[{"k":"Davaindia Generic Pharmacy","v":0.35,"n":379},{"k":"Zeelab Pharmacy Pvt Ltd","v":0.37,"n":307},{"k":"Sarvagunaushdhi Pvt Ltd","v":0.53,"n":405},{"k":"DR Best pharmaceuticals Pvt ","v":0.55,"n":172},{"k":"Reco Drugs","v":0.56,"n":57},{"k":"Unison Pharmaceuticals Pvt L","v":0.66,"n":177},{"k":"Elite Pharma Pvt Ltd","v":0.77,"n":142},{"k":"Walton Healthcare Pvt. Ltd","v":0.79,"n":51},{"k":"Sunrise Remedies Pvt Ltd","v":0.8,"n":130},{"k":"Indamed Pharmaceuticals Pvt ","v":0.8,"n":53},{"k":"Systopic Laboratories Pvt Lt","v":0.8,"n":228},{"k":"RKG Pharma","v":0.8,"n":97}],"moleculeSavings":[{"k":"Amoxycillin","brands":8373,"cheapest":0.23,"costliest":830.0,"v":829.77},{"k":"Paracetamol","brands":2238,"cheapest":0.1,"costliest":330.0,"v":329.9},{"k":"Azithromycin","brands":4766,"cheapest":0.25,"costliest":249.5,"v":249.25},{"k":"Pantoprazole","brands":2781,"cheapest":0.34,"costliest":150.0,"v":149.66},{"k":"Omeprazole","brands":1196,"cheapest":0.24,"costliest":135.0,"v":134.76},{"k":"Amlodipine","brands":1420,"cheapest":0.3,"costliest":65.0,"v":64.7},{"k":"Atorvastatin","brands":2216,"cheapest":0.6,"costliest":64.42,"v":63.82},{"k":"Telmisartan","brands":3997,"cheapest":0.65,"costliest":36.55,"v":35.91},{"k":"Metformin","brands":2171,"cheapest":0.42,"costliest":32.0,"v":31.58},{"k":"Cetirizine","brands":1367,"cheapest":0.03,"costliest":14.9,"v":14.87}]};
+const NS="http://www.w3.org/2000/svg";
+const tip=document.getElementById("tip");
+const fmt=n=>Math.abs(n)>=1000?n.toLocaleString():n;
+function showTip(e,h){tip.innerHTML=h;tip.style.opacity=1;tip.style.left=(e.clientX+12)+"px";tip.style.top=(e.clientY+12)+"px";}
+function hideTip(){tip.style.opacity=0;}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function svg(w,h){const s=el("svg",{viewBox:`0 0 ${w} ${h}`,width:w,height:h});s.style.maxWidth="100%";return s;}
+
+document.getElementById("hdrSub").textContent=
+  `${DATA.meta.medicines.toLocaleString()} medicines · ${DATA.meta.compositions.toLocaleString()} compositions · ${DATA.meta.manufacturers.toLocaleString()} manufacturers`;
+
+let pt="All";
+const ptSel=document.getElementById("ptSel");
+DATA.packTypes.forEach(p=>ptSel.add(new Option(p==="All"?"All formulations":p,p)));
+ptSel.onchange=()=>{pt=ptSel.value;render();};
+
+const pages=["overview","gaps","mfg","cat"],labels=["Overview","Price Gaps","Manufacturers","Categories"];
+let active="overview";const nav=document.getElementById("nav");
+pages.forEach((p,i)=>{const b=document.createElement("button");b.textContent=labels[i];b.className=p===active?"active":"";
+  b.onclick=()=>{active=p;[...nav.children].forEach(c=>c.classList.remove("active"));b.classList.add("active");
+    pages.forEach(pp=>document.getElementById("page-"+pp).classList.toggle("hidden",pp!==p));render();};nav.appendChild(b);});
+
+function barH(container,rows,{color,fmtLabel,unit=""}){
+  container.innerHTML="";
+  const labOf=r=>(fmtLabel?fmtLabel(r):fmt(r.v)+unit);
+  const w=Math.min(container.clientWidth||520,560),rowH=26,padT=6,
+    padL=Math.min(180,Math.max(...rows.map(r=>r.k.length))*5.9+8),
+    padR=Math.max(48,Math.max(...rows.map(r=>labOf(r).length))*5.9+12);
+  const h=padT+rows.length*rowH+6,mx=Math.max(...rows.map(r=>r.v),1),iw=w-padL-padR;
+  const s=svg(w,h);
+  rows.forEach((r,i)=>{const y=padT+i*rowH,bw=Math.max(2,iw*r.v/mx);
+    s.appendChild(el("text",{x:padL-8,y:y+rowH/2+4,"text-anchor":"end","font-size":11.5,fill:css("--ink")})).textContent=r.k;
+    const c=typeof color==="function"?color(r,i):(color||css("--accent"));
+    const rect=el("rect",{x:padL,y:y+4,width:bw,height:rowH-11,rx:4,fill:c});
+    rect.addEventListener("mousemove",e=>showTip(e,`<b>${r.k}</b><br>${r.tip||fmt(r.v)+unit}`));
+    rect.addEventListener("mouseleave",hideTip);s.appendChild(rect);
+    s.appendChild(el("text",{x:padL+bw+6,y:y+rowH/2+4,"font-size":11,fill:css("--muted")})).textContent=labOf(r);});
+  container.appendChild(s);
+}
+function barV(container,rows,{color,unit="",fmtLabel}){
+  container.innerHTML="";
+  const w=Math.min(container.clientWidth||520,900),h=210,padB=28,padT=20,padL=8,padR=8;
+  const mx=Math.max(...rows.map(r=>r.v),1),iw=w-padL-padR,bw=iw/rows.length;
+  const s=svg(w,h);
+  rows.forEach((r,i)=>{const bh=(h-padB-padT)*r.v/mx,x=padL+i*bw,y=h-padB-bh;
+    const c=typeof color==="function"?color(r,i):(color||css("--accent"));
+    const rect=el("rect",{x:x+bw*0.16,y,width:bw*0.68,height:Math.max(1,bh),rx:3,fill:c});
+    rect.addEventListener("mousemove",e=>showTip(e,`<b>${r.k}</b><br>${(fmtLabel?fmtLabel(r):fmt(r.v)+unit)}`));rect.addEventListener("mouseleave",hideTip);s.appendChild(rect);
+    s.appendChild(el("text",{x:x+bw/2,y:h-9,"text-anchor":"middle","font-size":10,fill:css("--muted")})).textContent=r.k;
+    if(rows.length<=12){const anc=i===0?"start":i===rows.length-1?"end":"middle";
+      const lx=i===0?x+bw*0.16:i===rows.length-1?x+bw*0.84:x+bw/2;
+      s.appendChild(el("text",{x:lx,y:y-5,"text-anchor":anc,"font-size":10.5,fill:css("--ink")})).textContent=(fmtLabel?fmtLabel(r):fmt(r.v)+unit);}});
+  container.appendChild(s);
+}
+
+function render(){
+  const o=DATA.byPackType[pt];
+  const kpis=[["Medicines",fmt(o.count)],["Compositions",fmt(DATA.meta.compositions)],
+    ["Manufacturers",fmt(DATA.meta.manufacturers)],["Cost 2x+ more",o.pct2+"%"],["Median ₹/unit","₹"+o.median_ppu]];
+  document.getElementById("kpis").innerHTML=kpis.map(k=>`<div class="kpi"><div class="v">${k[1]}</div><div class="l">${k[0]}</div></div>`).join("");
+
+  if(active==="overview"){
+    document.getElementById("affNote").textContent=
+      `${pt==="All"?"All formulations":pt} — ${o.pct2}% cost 2x+, ${o.pct5}% cost 5x+, ${o.pct10}% cost 10x+ vs the cheapest equivalent`;
+    const edges=DATA.affBins;
+    const rows=o.affHist.map((c,i)=>({k:edges[i+1]>=999?"20x+":edges[i]+"x",v:c}));
+    barV(document.getElementById("c-aff"),rows,{color:(r,i)=>i===0?css("--good"):i>=4?css("--bad"):css("--warn"),
+      fmtLabel:r=>r.v>=1000?Math.round(r.v/1000)+"k":""+r.v});
+    barH(document.getElementById("c-form"),DATA.formulationMix,{color:css("--accent"),fmtLabel:r=>fmt(r.v)});
+  }
+  if(active==="gaps"){
+    barH(document.getElementById("c-topgaps"),DATA.topGaps.slice(0,15).map(r=>({k:r.k,v:r.ratio,tip:`${r.brands} brands · ${r.ratio}x gap`})),
+      {color:css("--bad"),fmtLabel:r=>r.v+"x"});
+    barV(document.getElementById("c-comp"),DATA.competition,{color:css("--warn"),fmtLabel:r=>r.v+"x"});
+  }
+  if(active==="mfg"){
+    barH(document.getElementById("c-mexp"),DATA.mfgExpensive.map(r=>({k:r.k,v:r.v,tip:`${r.n} products · ${r.v}x median`})),
+      {color:css("--bad"),fmtLabel:r=>r.v+"x"});
+    barH(document.getElementById("c-maff"),DATA.mfgAffordable.map(r=>({k:r.k,v:r.v,tip:`${r.n} products · ${r.v}x median`})),
+      {color:css("--good"),fmtLabel:r=>r.v+"x"});
+  }
+  if(active==="cat"){
+    barH(document.getElementById("c-therapy"),DATA.therapyGaps.map(r=>({k:r.k,v:r.v,tip:`${r.n} compositions · ${r.v}x median gap`})),
+      {color:css("--warn"),fmtLabel:r=>r.v+"x"});
+    barH(document.getElementById("c-savings"),DATA.moleculeSavings.map(r=>({k:r.k,v:r.v,tip:`cheapest ₹${r.cheapest} vs costliest ₹${r.costliest}/unit`})),
+      {color:css("--accent"),fmtLabel:r=>"₹"+r.v});
+  }
+}
+render();
+window.addEventListener("resize",render);
+</script>

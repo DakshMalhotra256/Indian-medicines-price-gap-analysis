@@ -2,9 +2,27 @@
 
 **If two medicines contain the exact same molecule, why does one cost ₹0.33 and the other ₹23.80?**
 
-An Exploratory Data Analysis of **253,973 Indian medicines** investigating the branded vs generic price gap — revealing that 82% of medicines cost 2x+ more per unit than the cheapest available alternative.
+An end-to-end analysis of **253,973 Indian medicines** investigating the branded-vs-generic
+price gap — from raw data cleaning through Python EDA, **11 analytical SQL queries**, and an
+**interactive dashboard** — revealing that **82% of medicines cost 2x+ more per unit** than the
+cheapest available alternative.
+
+**▶ [Live interactive dashboard](https://dakshmalhotra256.github.io/Indian-medicines-price-gap-analysis/dashboard/)** — formulation slicer, price-gap, manufacturer, and category views (also a Power BI build; see [`dashboard/DASHBOARD_SPEC.md`](dashboard/DASHBOARD_SPEC.md)).
 
 ![Top 20 Price Gap](visualizations/06_top20_price_gap.png)
+
+---
+
+## 🔀 Pipeline
+
+`raw CSV → Python cleaning → SQLite → 11 SQL queries → interactive dashboard`
+
+| Layer | What it does | Where |
+|-------|--------------|-------|
+| **Data cleaning** | Removes discontinued/invalid rows, extracts pack quantity → `price_per_unit`, formulation type, salt, affordability & premium ratios | [`prepare_data.py`](prepare_data.py) |
+| **Python EDA** | 15 charts: distributions, competition paradox, manufacturer premiums, therapy categories | [`India's Medicine Price Gap Analyzer.ipynb`](India's%20Medicine%20Price%20Gap%20Analyzer.ipynb) |
+| **SQL analysis** | 11 queries — price gaps, competition bins, manufacturer premiums, category gaps, savings — with CTEs, window logic, and a custom `MEDIAN` aggregate | [`sql/analysis.sql`](sql/analysis.sql) |
+| **Dashboard** | 4-page interactive dashboard (+ Power BI spec) | [`dashboard/`](dashboard/) |
 
 ---
 
@@ -12,13 +30,13 @@ An Exploratory Data Analysis of **253,973 Indian medicines** investigating the b
 
 | Finding | Detail |
 |---------|--------|
-| **Median price gap** | 4.2x across all compositions with 5+ brands |
-| **Worst category** | Pain/Fever drugs have a 91.5x median gap |
-| **Competition paradox** | More brands = *wider* price gaps, not smaller (43.7x for 500+ brands vs 2.8x for 5-10) |
-| **Most overpriced manufacturer** | Venus Remedies Ltd charges 26.9x the market median |
-| **Most affordable manufacturer** | Davaindia Generic Pharmacy at 0.3x the median |
-| **Most expensive medicine** | Imbruvica 140mg Capsule (cancer) at ₹4,36,000 |
-| **Actionable savings** | Switching to generics for 10 common medicines saves ₹23–₹219 per unit |
+| **Overpricing is the norm** | 82.1% of medicines cost 2x+, 53.3% cost 5x+, and 31.9% cost 10x+ per unit vs the cheapest equivalent |
+| **Competition paradox** | More brands = *wider* gaps, not narrower — median gap climbs from **2.6x** (5-10 brands) to **43.7x** (500+ brands) |
+| **Most overpriced manufacturer** | Venus Remedies Ltd charges **26.9x** the composition median (139 products) |
+| **Most affordable manufacturer** | Davaindia Generic Pharmacy at **0.35x** the median (379 products) |
+| **Widest category gaps** | Gastro (8.3x), Vitamin/Supplement (7.9x) and Pain/Fever (6.9x) show the largest median gaps |
+| **Most expensive medicine** | A cancer therapy at ₹4,36,000 — investigated, not deleted (real, not a data error) |
+| **Actionable savings** | Common molecules (Paracetamol, Metformin, …) carry large per-unit gaps between cheapest and costliest brand |
 
 ---
 
@@ -26,107 +44,74 @@ An Exploratory Data Analysis of **253,973 Indian medicines** investigating the b
 
 This isn't a generic Kaggle EDA — it uses rigorous analytical decisions:
 
-- **Price-per-unit normalization** — Raw MRP comparison is misleading. A ₹100 strip of 10 tablets and a ₹50 strip of 5 have the same per-unit cost. All comparisons use `price_per_unit`.
-- **Outlier investigation, not deletion** — 245 medicines above the 99.9th percentile were inspected and flagged. A ₹4.36L cancer drug isn't a data error.
-- **Same-formulation comparison** — Prices are compared within the same formulation type (tablet vs tablet, not tablet vs injection) to avoid misleading ratios.
-- **Combination drug analysis** — 55.8% empty `short_composition2` recognized as single-ingredient drugs, not missing data.
+- **Price-per-unit normalization** — Raw MRP is misleading. A ₹100 strip of 10 tablets and a ₹50 strip of 5 have the same per-unit cost. All comparisons use `price_per_unit = price / pack_qty`.
+- **Same-formulation comparison** — Prices compared within the same formulation type (tablet vs tablet, not tablet vs injection) via `comp_and_type`.
+- **Outlier investigation, not deletion** — Medicines above the 99.9th percentile are flagged (`is_premium_priced`), not dropped. A ₹4.36L cancer drug isn't an error.
+- **Combination-drug handling** — ~56% empty `short_composition2` recognized as single-ingredient drugs, not missing data.
 
 ---
 
-## 📈 Visualizations (15 Charts)
+## 🧮 SQL Analysis (`sql/analysis.sql`)
 
-| # | Chart | Type |
-|---|-------|------|
-| 1 | Price Distribution (raw + log scale) | Histogram |
-| 2 | Top 20 Manufacturers by Product Count | Horizontal Bar |
-| 3 | Top 20 Most Common Molecules | Horizontal Bar |
-| 4 | Medicine Formulation Types | Bar Chart |
-| 5 | Single vs Combination Drugs | Bar + Boxplot |
-| 6 | Top 20 Per-Unit Price Gap (30+ brands) | Bar Chart (log) |
-| 7 | Price Ratio Distribution (zoomed + log) | Histogram |
-| 8 | 5 Common Medicines Deep-Dive | Boxplots |
-| 9 | Competition vs Price Gap | Grouped Bar |
-| 10 | Most/Least Expensive Manufacturers | Dual Bar |
-| 11 | Manufacturer × Molecule Heatmap | Heatmap |
-| 12 | Price by Therapeutic Category | Boxplot |
-| 13 | Price Gap by Drug Category | Lollipop Chart |
-| 14 | Affordability Index + Top Savings | Histogram + Bar |
-| 15 | Premium Medicines & Top Manufacturers | Dual Bar |
+11 queries run against a SQLite build of the cleaned data:
 
-### Sample Visualizations
+- Dataset overview by formulation type
+- Biggest per-unit price gaps (≥30 brands, ranked by costliest ÷ cheapest)
+- The competition paradox (median gap by brand-count bin)
+- Affordability (% of medicines 2x / 5x / 10x above the cheapest equivalent)
+- Most / least overpriced manufacturers (per-unit premium vs composition median)
+- Price gap by therapeutic category
+- Most crowded molecules, single vs combination pricing, most expensive medicines
+- Switch-and-save analysis for common household molecules
+
+```bash
+python prepare_data.py     # raw CSV -> data/medicines_clean.csv
+python build_db.py         # -> data/medicines.db (SQLite, indexed)
+python run_analysis.py     # run all 11 queries, export dashboard CSVs
+```
+
+---
+
+## 📈 Python EDA (15 Charts)
+
+The notebook produces 15 visualizations — price distributions, the competition-vs-gap
+relationship, manufacturer × molecule heatmap, therapeutic-category boxplots, the
+affordability index, and top-savings tables.
 
 ![Manufacturer Premium](visualizations/10_manufacturer_premium.png)
-
 ![Heatmap](visualizations/11_manufacturer_salt_heatmap.png)
-
-![Therapy Lollipop](visualizations/13_therapy_price_ratio.png)
 
 ---
 
 ## 🗂️ Dataset
 
-This project uses the **A-Z Medicine Dataset of India** (~250K medicines).
+The **Indian Medicine Dataset** (253,973 medicines): `id, name, price(₹), Is_discontinued,
+manufacturer_name, type, pack_size_label, short_composition1, short_composition2`.
 
-- **Download:** [Kaggle](https://www.kaggle.com/datasets/shudhanshusingh/az-medicine-dataset-of-india)
-- Place the downloaded CSV (`A_Z_medicines_dataset_of_India.csv`) in the project root folder before running the notebook.
-
-### Columns Used
-| Column | Description |
-|--------|-------------|
-| `name` | Medicine brand name |
-| `price(₹)` | MRP in Indian Rupees |
-| `manufacturer_name` | Manufacturing company |
-| `pack_size_label` | Pack description (e.g., "strip of 10 tablets") |
-| `short_composition1` | Primary salt/molecule + dosage |
-| `short_composition2` | Secondary salt (empty ~56% = single-ingredient) |
+- Source: [junioralive/Indian-Medicine-Dataset](https://github.com/junioralive/Indian-Medicine-Dataset) (also on [Kaggle](https://www.kaggle.com/datasets/shudhanshusingh/az-medicine-dataset-of-india))
+- Place the CSV at `data/indian_medicines.csv`, then run the pipeline above.
 
 ---
 
-## 🚀 How to Run
-```bash
-# Clone the repo
-git clone https://github.com/DakshMalhotra256/Indian-medicines-price-gap-analysis.git
-cd Indian-medicines-price-gap-analysis
+## 🛠️ Tools
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Download dataset from Kaggle and place in project root
-
-# Launch notebook
-jupyter notebook India's Medicine Price Gap Analyzer.ipynb
-```
-
----
-
-## 🛠️ Tools & Libraries
-
-- **Python** — Pandas, NumPy, Matplotlib, Seaborn, Regex
-- **Jupyter Notebook** — Interactive analysis and visualization
-- **Dataset** — Kaggle A-Z Medicine Dataset of India
+- **Python** — Pandas, NumPy, Matplotlib, Seaborn, Regex (cleaning + EDA)
+- **SQL (SQLite)** — CTEs, conditional aggregation, custom `MEDIAN` aggregate
+- **Dashboard** — self-contained interactive HTML + Power BI spec (DAX)
 
 ---
 
 ## ⚠️ Limitations
 
-1. **Cross-format noise** — Some ratios may be inflated where different pack sizes share the same composition (e.g., 5ml sachet vs 500ml bottle)
-2. **Therapeutic mapping** — Covers ~33% of dataset (30 common molecules across 8 categories)
-3. **No time dimension** — Single snapshot, cannot track price trends
-4. **Pack quantity heuristic** — Uses first number in pack label as quantity
-
-## 🔮 Future Work
-
-- Time-series analysis with historical pricing data
-- Comparison with Jan Aushadhi (government pharmacy) prices
-- Interactive web app for medicine price lookup
-- NLP-based auto-classification of therapeutic categories
+1. **Cross-pack noise** — a few ratios may be inflated where very different pack sizes share a composition; mitigated by same-formulation grouping.
+2. **Therapeutic mapping** — a keyword mapping over common molecules; the rest fall in "Other".
+3. **No time dimension** — a single price snapshot, so no trend analysis.
+4. **Pack-quantity heuristic** — uses the first number in the pack label as the unit count.
 
 ---
 
 ## 👤 Author
 
-**Daksh Malhotra**
+**Daksh Malhotra** — B.Tech Engineering Physics, Delhi Technological University (DTU)
 
-B.Tech Engineering Physics, Delhi Technological University (DTU)
-
-*This analysis is for educational purposes. Always consult a qualified medical professional before switching medications.*
+*For educational purposes. Always consult a qualified medical professional before switching medications.*
